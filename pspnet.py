@@ -1,17 +1,16 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import os
 from os.path import splitext, join, isfile, isdir, basename
 import argparse
 import numpy as np
 from scipy import misc, ndimage
-from keras import backend as K
-from keras.models import model_from_json, load_model
+from tensorflow.keras import backend as K
+from tensorflow.keras.models import model_from_json, load_model
 import tensorflow as tf
 import layers_builder as layers
 from glob import glob
 from utils import utils
-from keras.utils.generic_utils import CustomObjectScope
+from tensorflow.keras.utils import CustomObjectScope
 import cv2
 import math
 # -- Fix for macos, uncomment it
@@ -169,7 +168,7 @@ class PSPNet(object):
         h5_path = join("weights", "keras", weights_path + ".h5")
 
         print("Importing weights from %s" % npy_weights_path)
-        weights = np.load(npy_weights_path, encoding='bytes').item()
+        weights = np.load(npy_weights_path, encoding='bytes', allow_pickle=True).item()
         for layer in self.model.layers:
             print(layer.name)
             if layer.name[:4] == 'conv' and layer.name[-2:] == 'bn':

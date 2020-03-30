@@ -1,13 +1,10 @@
-from __future__ import print_function
 from math import ceil
-from keras import layers
-from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
-from keras.layers import BatchNormalization, Activation, Input, Dropout, ZeroPadding2D, Lambda
-from keras.layers.merge import Concatenate, Add
-from keras.models import Model
-from keras.optimizers import SGD
-from keras.backend import tf as ktf
-
+from tensorflow.keras import layers
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
+from tensorflow.keras.layers import BatchNormalization, Activation, Input, Dropout, ZeroPadding2D, Lambda
+from tensorflow.keras.layers import Concatenate, Add
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
 
 learning_rate = 1e-3  # Layer specific learning rate
@@ -29,8 +26,7 @@ class Interp(layers.Layer):
 
     def call(self, inputs, **kwargs):
         new_height, new_width = self.new_size
-        resized = ktf.image.resize_images(inputs, [new_height, new_width],
-                                          align_corners=True)
+        resized = tf.image.resize(inputs, size=[new_height, new_width])
         return resized
 
     def compute_output_shape(self, input_shape):

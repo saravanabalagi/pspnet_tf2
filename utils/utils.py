@@ -1,7 +1,7 @@
 from __future__ import print_function
 import colorsys
 import numpy as np
-from keras.models import Model
+from tensorflow.keras.models import Model
 from cityscapes_labels import trainId2label
 from ade20k_labels import ade20k_id2label
 from pascal_voc_labels import voc_id2label
