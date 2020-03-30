@@ -5,6 +5,11 @@ Keras Pyramid Scene Parsing Network ported to tensorflow 2 from keras/tf_1.13.
 - Caffe implementation: [PSPNet(caffe)](https://github.com/hszhao/PSPNet)
 - Py35 Keras implementation: [PSPNet-Keras-tensorflow](https://github.com/Vladkryvoruchko/PSPNet-Keras-tensorflow)
 
+## Dependencies
+
+- Tensorflow 2
+- OpenCV
+
 ## Pretrained weights
 
 Pretrained weights can be downloaded here:
