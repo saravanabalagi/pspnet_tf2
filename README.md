@@ -2,13 +2,13 @@
 
 Keras Pyramid Scene Parsing Network ported to tensorflow 2 from keras/tf_1.13.
 
-- Caffe implementation: [PSPNet(caffe)](https://github.com/hszhao/PSPNet)
-- Py35 Keras implementation: [PSPNet-Keras-tensorflow](https://github.com/Vladkryvoruchko/PSPNet-Keras-tensorflow)
+- Caffe implementation: [PSPNet](https://github.com/hszhao/PSPNet)
+- Py35 Keras Tensorflow1.13 implementation: [PSPNet-Keras-tensorflow](https://github.com/Vladkryvoruchko/PSPNet-Keras-tensorflow)
 
 ## Dependencies
 
-- Tensorflow 2
-- OpenCV
+- Tensorflow 2 (tensorflow / tensorflow-gpu / tensorflow-cpu)
+- OpenCV (opencv-python / opencv-contrib-python)
 
 ## Pretrained weights
 
@@ -28,13 +28,14 @@ Find example [notebook](save_and_load.ipynb) which demonstrates save and load.
 
 ## Usage:
 
-```bash
-python pspnet.py -m <model> -i <input_image>  -o <output_path>
-python pspnet.py -m pspnet101_cityscapes -i example_images/cityscapes.png -o example_results/cityscapes.jpg
-python pspnet.py -m pspnet101_voc2012 -i example_images/pascal_voc.jpg -o example_results/pascal_voc.jpg
+```sh
+# python pspnet.py -m <model> -i <input_image>  -o <output_path> [-other_arguments]
+python pspnet.py -m pspnet101_cityscapes -i example_images/cityscapes.jpg -o example_results/cityscapes.jpg -s -ms -f
+python pspnet.py -m pspnet101_voc2012 -i example_images/pascal_voc.jpg -o example_results/pascal_voc.jpg -s -ms -f
+python pspnet.py -m pspnet50_ade20k -i example_images/ade20k.jpg -o example_results/ade20k.jpg -s -ms -f
 ```
 List of arguments:
-```bash
+```sh
  -m --model        - which model to use: 'pspnet50_ade20k', 'pspnet101_cityscapes', 'pspnet101_voc2012'
     --id           - (int) GPU Device id. Default 0
  -s --sliding      - Use sliding window
@@ -54,13 +55,10 @@ List of arguments:
 * The interpolation layer is implemented as custom layer "Interp"
 * Forward step takes about ~1 sec on single image
 * Memory usage can be optimized with:
-    ```python
-    config = tf.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = 0.3 
-    sess = tf.Session(config=config)
-    ```
-* ```ndimage.zoom``` can take a long time
-
-
-
- 
+```python
+# before calling any of the tf functions
+for gpu in tf.config.experimental.list_physical_devices('GPU'):
+    tf.config.experimental.set_memory_growth(gpu, True)
+    # if you want to restrict total memory you can try
+    # tf.config.experimental.set_memory_growth(gpu, True)
+```
