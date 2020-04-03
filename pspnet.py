@@ -9,6 +9,7 @@ from utils import utils
 from tensorflow.keras.utils import CustomObjectScope
 import cv2
 import math
+import tensorflow as tf
 
 # # Fix for macOS, uncomment it
 # import matplotlib
@@ -45,11 +46,38 @@ class PSPNet(object):
             print('Load pre-trained weights')
             self.model = load_model(weights)
 
+    def predict_multi(self, images, flip_evaluation=False):
+        """
+        Predict segmentation for multiple images at once. Adjust the batch size to fit your GPU
+        Arguments:
+            images: must be n x rows x cols x 3, n being number of images
+            flip_evaluation: if true, predictions are made on flipped image and averages with original predictions
+        """
+        if images.shape[1:3] != self.input_shape:
+            print(f'Resizing images {images.shape} to {self.input_shape}')
+            images = np.array([cv2.resize(img, self.input_shape) for img in images])
+
+        BATCH_SIZE = 32
+        images = images - DATA_MEAN
+        images = images[..., ::-1]
+        if flip_evaluation:
+            flipped_images = np.flip(images, axis=-2)
+            stacked_images_and_flipped = np.concatenate([images, flipped_images], axis=0)
+            print(f'Predict multi: {images.shape[0]} images, with flip {stacked_images_and_flipped.shape[0]} images')
+            predictions_with_flipped = self.model.predict(stacked_images_and_flipped, batch_size=BATCH_SIZE)
+            stacked_predictions = predictions_with_flipped.reshape([2] + list(images.shape[:-1]) + [-1])
+            predictions = np.mean(stacked_predictions, axis=0)
+        else:
+            print(f'Predict multi: {images.shape[0]} images')
+            predictions = self.model.predict(images, batch_size=BATCH_SIZE)
+        return predictions
+
     def predict(self, img, flip_evaluation=False):
         """
         Predict segmentation for an image.
         Arguments:
             img: must be rows x cols x 3
+            flip_evaluation: if true, predictions are made on flipped image and averages with original predictions
         """
 
         if img.shape[0:2] != self.input_shape:
@@ -109,6 +137,49 @@ class PSPNet(object):
         # visualize normalization Weights
         # plt.imshow(np.mean(count_predictions, axis=2))
         # plt.show()
+        return full_probs
+
+    def predict_sliding_batch(self, full_img, flip_evaluation):
+        """
+        Same as predict sliding but uses predict_multi to do batch inference
+        On Xeon bronze 3104 / GTX 1080 Ti example_images/ade20k.jpg was inferred and compared
+        predict_sliding_multi took 294.81s and reached a max memory utilization of 9.6G GPU/43GB RAM
+        predict_sliding took 272.81s and reached a max memory utilization of 5.9G GPU/30GB RAM
+        Hence not using it in the main pipeline for now, keeping this code for later
+        """
+        tile_size = self.input_shape
+        classes = self.num_classes
+        overlap = 1 / 3
+
+        stride = math.ceil(tile_size[0] * (1 - overlap))
+
+        # strided convolution formula
+        tile_rows = max(int(math.ceil((full_img.shape[0] - tile_size[0]) / stride) + 1), 1)
+        tile_cols = max(int(math.ceil((full_img.shape[1] - tile_size[1]) / stride) + 1), 1)
+        print("Need %i x %i prediction tiles @ stride %i px" % (tile_cols, tile_rows, stride))
+
+        full_probs = np.zeros((full_img.shape[0], full_img.shape[1], classes))
+        count_predictions = np.zeros((full_img.shape[0], full_img.shape[1], classes))
+
+        tiled_image_shapes = []
+        for row in range(tile_rows):
+            for col in range(tile_cols):
+                x1 = int(col * stride)
+                y1 = int(row * stride)
+                x2 = min(x1 + tile_size[1], full_img.shape[1])
+                y2 = min(y1 + tile_size[0], full_img.shape[0])
+                x1 = max(int(x2 - tile_size[1]), 0)  # for portrait images the x1 underflows sometimes
+                y1 = max(int(y2 - tile_size[0]), 0)  # for very few rows y1 underflows
+                tiled_image_shapes.append(((x1, y1), (x2, y2)))
+
+        tiled_images = [full_img[y1:y2, x1:x2] for ((x1, y1), (x2, y2)) in tiled_image_shapes]
+        tiled_predictions = self.predict_multi(np.stack(tiled_images, axis=0), flip_evaluation)
+        for index, ((x1, y1), (x2, y2)) in enumerate(tiled_image_shapes):
+            full_probs[y1:y2, x1:x2] += tiled_predictions[index]
+            count_predictions[y1:y2, x1:x2] += 1
+
+        # average the predictions in the overlapping regions
+        full_probs /= count_predictions
         return full_probs
 
     @staticmethod
@@ -282,6 +353,8 @@ def main(args):
 
 
 if __name__ == "__main__":
+    for gpu in tf.config.experimental.list_physical_devices('GPU'):
+        tf.config.experimental.set_memory_growth(gpu, True)
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', type=str, default='pspnet101_voc2012',
                         help='Model/Weights to use',
@@ -306,4 +379,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    import time
+    start = time.time()
     main(args)
+    end = time. time()
+    print(f"Took {end-start:.2f}s")
