@@ -42,6 +42,9 @@ List of arguments:
  -f --flip         - Additional prediction of flipped image
  -ms --multi_scale - Predict on multiscale images
 ```
+
+![new](https://img.shields.io/badge/-new-blue) Batch Predict on GPU, check source [here](https://github.com/saravanabalagi/pspnet_tf2/blob/master/pspnet.py#L49)
+
 ## Keras results:
 
 | Input | Segmented | Blended | Probe |
